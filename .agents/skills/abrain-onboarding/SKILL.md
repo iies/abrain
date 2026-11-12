@@ -8,4 +8,4 @@ description: abrain 위키를 처음 쓸 때 한 번 실행한다. 위키 주인
 이 스킬의 본문은 Claude Code와 같이 쓴다. `.claude/skills/abrain/skills/onboarding/SKILL.md`를 읽고 그대로 실행한다.
 
 - 그 문서의 `$ARGUMENTS`는 사용자가 이 스킬과 함께 준 요청 내용이다.
-- `/abrain:onboarding`, `/abrain:ingest`, `/abrain:query`, `/abrain:lint`는 Codex에서 `$abrain-onboarding`, `$abrain-ingest`, `$abrain-query`, `$abrain-lint`로 읽는다.
+- `/abrain:onboarding`, `/abrain:ingest`, `/abrain:query`, `/abrain:lint`, `/abrain:morning`은 Codex에서 `$abrain-onboarding`, `$abrain-ingest`, `$abrain-query`, `$abrain-lint`, `$abrain-morning`으로 읽는다.

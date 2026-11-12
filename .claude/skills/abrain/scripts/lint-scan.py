@@ -147,8 +147,8 @@ def main():
         newer = []
         for s2, pg2 in content.items():
             fm2 = pg2["fm"] or {}
-            if fm2.get("type") != "source":
-                continue
+            if fm2.get("type") != "source" or "/브리핑/" in pg2["path"]:
+                continue  # 모닝 브리핑은 다른 페이지를 옮겨 적은 것이라 새 소스로 치지 않는다
             d2 = to_date(fm2.get("updated", "")) or to_date(fm2.get("date", ""))
             if d2 and d2 > upd and re.search(r"\[\[" + re.escape(stem) + r"(\]\]|\||#)", pg2["text"]):
                 newer.append(s2)
@@ -175,16 +175,14 @@ def main():
     # 미처리 원본
     unprocessed = []
     if raw.is_dir():
-        referenced = set()
-        for pg in content.values():
-            r = (pg["fm"] or {}).get("raw")
-            if r:
-                referenced.add(r.removeprefix("raw/"))
+        # source 페이지의 raw: 필드나 본문에 경로가 적혀 있으면 처리된 원본이다
+        # (다시 가져온 스냅샷, 같은 날 다시 만든 모닝 브리핑 수집본은 본문에 적는다).
+        source_text = "\n".join(pg["text"] for pg in content.values() if (pg["fm"] or {}).get("type") == "source")
         for p in sorted(raw.rglob("*")):
             rel = p.relative_to(raw)
             if not p.is_file() or rel.parts[0] in ("_extracted", "assets") or p.name.startswith("."):
                 continue
-            if rel.as_posix() not in referenced:
+            if f"raw/{rel.as_posix()}" not in source_text:
                 unprocessed.append(f"raw/{rel.as_posix()}")
 
     print(f"# abrain lint-scan {today} — 페이지 {len(content)}개")

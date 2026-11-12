@@ -300,12 +300,13 @@ fi
 say "5/6 위키 폴더"
 mkdir -p "$ROOT/raw/assets" "$ROOT/raw/_extracted" \
          "$ROOT/wiki/1 프로젝트" "$ROOT/wiki/2 사람" "$ROOT/wiki/3 결정" "$ROOT/wiki/4 주제" \
-         "$ROOT/wiki/5 자료/회의" "$ROOT/wiki/5 자료/문서" "$ROOT/wiki/5 자료/웹·영상" "$ROOT/wiki/5 자료/메모"
+         "$ROOT/wiki/5 자료/회의" "$ROOT/wiki/5 자료/문서" "$ROOT/wiki/5 자료/웹·영상" "$ROOT/wiki/5 자료/메모" \
+         "$ROOT/wiki/5 자료/브리핑"
 seed() {  # seed <경로> <내용>  — 파일이 없을 때만 만든다
   if [ -f "$1" ]; then return; fi
   printf "%b" "$2" > "$1"
 }
-seed "$ROOT/wiki/index.md"  "# Index\n\n## Decisions\n\n## Projects\n\n## People\n\n## Topics\n\n## Sources\n"
+seed "$ROOT/wiki/index.md"  "# Index\n\n## Decisions\n\n## Projects\n\n## People\n\n## Topics\n\n## Briefings\n\n## Sources\n"
 seed "$ROOT/wiki/log.md"    "# Log\n"
 seed "$ROOT/wiki/용어집.md" "# 용어집\n\n확정된 표기를 기록한다. 틀린 표기가 원본에 나오면 묻지 않고 확정 표기로 바꿔 쓴다.\n\n| 확정 표기 | 틀린 표기·변형 | 뜻 |\n|---|---|---|\n"
 if [ -d "$ROOT/wiki/5 자료" ] && [ -f "$ROOT/wiki/index.md" ]; then

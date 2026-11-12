@@ -3,6 +3,7 @@
 # 빈 폴더와 index·log·용어집은 INSTALL.sh 가 만든다.
 /raw/
 /wiki/
+/out/
 
 # 개인 설정과 비밀 값
 .env
