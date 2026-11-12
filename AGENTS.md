@@ -19,6 +19,7 @@ raw/_extracted/      원본에서 뽑은 텍스트와 그림. 에이전트가 �
 wiki/index.md        전체 페이지 목록 (내용 기준)
 wiki/log.md          작업 기록 (시간 기준, 추가만)
 wiki/용어집.md        확정된 용어 표기와 틀린 표기 (사람 이름은 사람 페이지의 aliases)
+wiki/프로필.md        위키 주인의 기본 정보, 본인 식별 단서, 답변 선호 (onboarding이 만든다)
 wiki/sources/        원본 1개당 요약 1개
 wiki/decisions/      의사결정 1건당 1개
 wiki/people/         사람 1명당 1개
@@ -40,7 +41,7 @@ wiki/topics/         개념, 반복되는 주제, 비교·분석
 
 ```yaml
 ---
-type: source | decision | person | project | topic
+type: source | decision | person | project | topic | profile
 updated: 2026-11-12
 ---
 ```
@@ -52,6 +53,7 @@ updated: 2026-11-12
 - **person** — `aliases: [별명, 영문명, 음성 인식 오타]`. 본문: 역할과 소속 / 담당 영역 / 최근 맥락(입장, 우려, 약속) / 관련 프로젝트·결정.
 - **project** — 한 줄 상태 / 현황 / 열린 항목 / 리스크 / 관련 결정 / 관련 사람.
 - **topic** — 요약 / 본문 / 관련 링크.
+- **profile** — `wiki/프로필.md` 하나뿐이다. `onboarded:` (온보딩 날짜). 본문: 사용자 / 진행 중인 프로젝트 / 자주 함께 일하는 사람 / 자료에서 사용자를 알아보는 단서 / 자주 넣는 자료 / 답변 선호. 다른 페이지에 있는 내용은 링크와 한 줄만 둔다.
 
 **중복 금지**: 사람·프로젝트·주제 페이지를 새로 만들기 전에 이름, 표기 변형(한글/영문, 띄어쓰기), `aliases`로 `wiki/`를 검색한다. 같은 대상이면 기존 페이지를 갱신하고 새 표기를 `aliases`에 더한다.
 
@@ -71,14 +73,30 @@ updated: 2026-11-12
 
 사람이 아래 단어를 쓰거나 같은 뜻으로 말하면 해당 작업을 수행한다.
 
-세 작업은 스킬로도 부를 수 있다: Claude Code는 `/abrain:ingest`, `/abrain:query`, `/abrain:lint`, Codex는 `$abrain-ingest`, `$abrain-query`, `$abrain-lint`. 스킬 본문(`.claude/skills/abrain/skills/*/SKILL.md`)은 이 파일의 절차에 실행 순서와 보고 형식을 더한 것이다. 말로 요청받아도 해당 스킬 본문을 읽고 따른다. 둘이 어긋나면 이 파일이 우선한다.
+네 작업은 스킬로도 부를 수 있다: Claude Code는 `/abrain:onboarding`, `/abrain:ingest`, `/abrain:query`, `/abrain:lint`, Codex는 `$abrain-onboarding`, `$abrain-ingest`, `$abrain-query`, `$abrain-lint`. 스킬 본문(`.claude/skills/abrain/skills/*/SKILL.md`)은 이 파일의 절차에 실행 순서와 보고 형식을 더한 것이다. 말로 요청받아도 해당 스킬 본문을 읽고 따른다. 둘이 어긋나면 이 파일이 우선한다.
+
+### onboarding — "온보딩", "처음 설정", "내 정보 등록"
+
+처음 한 번만 한다. `wiki/프로필.md`가 있으면 하지 않고, 바뀐 내용은 정정으로 받는다. `wiki/프로필.md`가 없는데 사람이 다른 작업을 요청하면 그 작업을 먼저 하고 보고 끝에 한 줄로 온보딩을 권한다.
+
+1. **이미 아는 것.** 위키에 사용자에 대한 내용이 있으면 모아서, 다시 묻지 않고 맞는지만 확인한다.
+2. **묻기.** 이름과 다른 표기, 소속과 역할, 진행 중인 프로젝트, 자주 함께 일하는 사람, 자주 쓰는 약어·용어, 자료에서 사용자를 알아보는 단서, 주로 넣을 자료와 원하는 답을 한 번에 묻는다. 이름 말고는 답하지 않아도 된다. 빈 항목을 다시 묻지 않는다.
+3. **확인.** 정리한 내용과 쓸 페이지를 표로 보여주고 확인을 받는다. 확인 전에는 쓰지 않는다.
+4. **쓰기.** 질문과 답을 원문 그대로 `raw/YYYY-MM-DD 온보딩 인터뷰.md`에 저장하고, 그 source 요약을 출처로 사용자·사람·프로젝트 페이지, 용어집, `wiki/프로필.md`를 쓴다. 사람이 직접 꼽은 대상은 한 번 언급이어도 페이지를 만든다. 답에 없는 내용을 추측해 채우지 않는다.
+5. **기록과 보고.** index와 log를 갱신하고, 만든 페이지와 비워 둔 항목을 보고한다.
+
+**프로필 사용**: ingest와 query는 `wiki/프로필.md`가 있으면 시작할 때 읽는다.
+
+- 사람이 대화에서 직접 쓴 메모와 정정의 "나", "저", "제가"는 프로필의 사용자다.
+- 녹취록·캡처에서 프로필의 "사용자를 알아보는 단서"에 맞는 발언은 사용자의 발언으로 확정해 적고, 보고에 "프로필 단서로 판단"이라고 밝힌다. 단서가 없거나 맞지 않으면 화자 추정 규칙을 따른다.
+- 답의 길이와 형식은 "답변 선호"를 따른다. 단, 출처 인용과 보고 항목은 줄이지 않는다.
 
 ### ingest — "ingest", "정리해줘", "이거 넣어줘"
 
 대상: 지정한 파일이나 URL. 지정이 없으면 `raw/`에 있지만 어떤 source 페이지의 `raw:` 필드에도 없는 파일 전부 (`raw/_extracted/`, `raw/assets/` 제외). 대화에 붙여넣은 텍스트는 먼저 `raw/YYYY-MM-DD 제목.md`로 원문 그대로 저장한 뒤 진행한다. `raw/` 밖의 파일은 `raw/`로 복사한다 (원본은 옮기지 않는다). 대상이 10개를 넘으면 먼저 3개만 처리해 보고한 뒤 나머지를 진행한다.
 
 1. **가져오기와 변환.** 아래 "입력 형식" 표에 따라 원본을 `raw/`에 두고, 읽을 수 없는 형식은 텍스트로 바꿔 `raw/_extracted/원본파일명.md`에 저장한다. 이미 변환된 파일이 있으면 다시 변환하지 않는다. 파일 원본을 `raw/`에 둘 수 없으면 (경로 없이 내용만 전달된 첨부 파일, 읽을 수 없는 경로, 복사 실패) 그 파일은 ingest하지 않는다. 전달된 내용만으로 진행하지 말고, "원본을 `raw/`에 저장하지 못했습니다. 파일을 `raw/` 폴더에 직접 넣은 뒤 다시 ingest 해 주세요."라고 요청하고 나머지를 계속 처리한다.
-2. **읽기.** 내용을 끝까지 읽는다. `wiki/index.md`와 `wiki/용어집.md`를 읽고, 관련 기존 페이지를 찾아 읽는다.
+2. **읽기.** 내용을 끝까지 읽는다. `wiki/프로필.md`, `wiki/index.md`, `wiki/용어집.md`를 읽고, 관련 기존 페이지를 찾아 읽는다.
 3. **용어 확인.** 아래 "용어 확인" 규칙에 따라 모호한 용어를 사람에게 묻고 답을 받는다.
 4. **요약.** `wiki/sources/`에 요약 페이지를 쓴다.
 5. **전파.** 등장한 결정, 사람, 프로젝트, 주제의 페이지를 갱신한다. 없으면 만든다. 단, 한 번 스치듯 언급된 것은 페이지를 만들지 않고 요약에만 남긴다.
@@ -119,12 +137,22 @@ updated: 2026-11-12
 | hwp | `hwp5html --html --output raw/_extracted/원본파일명.html 파일` 후 `markitdown`으로 변환한다. |
 | hwpx | `unzip -p 파일 'Contents/section*.xml'` 출력에서 `<hp:t>` 태그의 텍스트를 뽑는다. |
 | doc, rtf, odt | `textutil -convert txt -stdout 파일` |
-| 음성 (mp3, wav, m4a, ogg, flac), 영상 (mp4, mkv, mov, webm) | 먼저 `./INSTALL.sh --check-models`로 음성 인식 모델이 있는지 확인한다. 실패하면 전사하지 않는다. 모델을 직접 받지 말고, 그 파일은 건너뛰고 나머지를 계속 처리한다. 보고에 "음성 인식 모델이 설치되어 있지 않습니다. 터미널에서 `./INSTALL.sh --models`를 실행해 모델(약 4.6GB)을 받은 뒤 다시 ingest 해 주세요."라고 안내하고 건너뛴 파일을 적는다. 모델이 있으면 `mlx_whisper 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f txt --output-dir raw/_extracted/`. "No Metal device" 오류가 나거나 명령이 없으면 `whisper-ctranslate2 파일 --model large-v3-turbo --language ko --output_format txt --output_dir raw/_extracted/`. 한국어가 아니면 `--language`를 뺀다. 결과에서 같은 문장이 계속 반복되면 `--condition-on-previous-text False` (whisper-ctranslate2는 `--condition_on_previous_text False`)를 붙여 다시 전사한다. |
+| 음성 (mp3, wav, m4a, ogg, flac), 영상 (mp4, mkv, mov, webm) | 먼저 `./INSTALL.sh --check-models`로 음성 인식 모델이 있는지 확인한다. 실패하면 전사하지 않는다. 모델을 직접 받지 말고, 그 파일은 건너뛰고 나머지를 계속 처리한다. 보고에 "음성 인식 모델이 설치되어 있지 않습니다. 터미널에서 `./INSTALL.sh --models`를 실행해 모델(약 4.6GB)을 받은 뒤 다시 ingest 해 주세요."라고 안내하고 건너뛴 파일을 적는다. 모델이 있으면 아래 "음성 전사 실행 규칙"을 따른다. |
 | 영상 속 화면 (화면 공유, 발표 자료) | 화면 내용이 중요하면 `ffmpeg -i 파일 -vf "select='eq(n,0)+gt(scene,0.3)'" -fps_mode vfr raw/_extracted/원본파일명/f-%03d.jpg`로 장면을 뽑아 직접 본다. |
 | YouTube URL | 먼저 `yt-dlp --list-subs URL`로 자막을 확인한다. 영상의 원래 언어 자막이 있으면 (사람이 올린 자막 우선, 없으면 자동 자막) `yt-dlp --skip-download --write-subs --write-auto-subs --sub-langs 언어코드 --convert-subs srt -o "raw/%(upload_date>%Y-%m-%d)s %(title)s" URL`로 받는다. 번역 자막은 요청하지 않는다 (차단된다). 자막이 없으면 `yt-dlp -x --audio-format mp3 -o "raw/%(upload_date>%Y-%m-%d)s %(title)s.%(ext)s" URL`로 음성을 받아 음성 파일과 같이 처리한다. 영상 파일 자체는 받지 않는다. |
 | Google Docs·Slides·Sheets URL | 연결된 Google Drive 도구로 내보내 `raw/YYYY-MM-DD 제목.확장자`로 저장한다 (Slides는 pdf, Docs는 docx, Sheets는 xlsx). 도구가 파일을 다른 위치에 저장하면 `raw/`로 복사하고, 다운로드 URL을 돌려주면 `curl`로 받는다. 도구가 없거나 실패하면 파일로 내려받아 `raw/`에 넣어 달라고 요청한다. |
 | 그 밖의 웹 URL | `curl -sL -A "Mozilla/5.0" URL \| markitdown -x html > "raw/YYYY-MM-DD 제목.md"`. 본문이 비었거나 로그인 화면이면 중단하고 보고한다. |
 | 그 밖의 형식 | `markitdown 파일`을 시도한다. 실패하면 보고한다. |
+
+#### 음성 전사 실행 규칙
+
+- **Codex의 MLX 전사는 최초 실행부터 샌드박스 밖에서 실행한다.** `exec_command`의 `sandbox_permissions: "require_escalated"`를 지정하고 Metal GPU 접근 목적을 `justification`에 적는다. 샌드박스 안에서 먼저 실행해 실패를 재현하지 않는다. 모델 설치 확인과 원본 복사 등 GPU가 필요 없는 작업은 이 규칙의 대상이 아니다.
+- 이 Mac에서 Codex는 `/Users/dennis/.local/bin/mlx_whisper` 절대 경로로 호출한다. 명령 허용 규칙과 정확히 일치하도록 전사 명령은 다른 명령이나 환경 변수 할당과 묶지 않은 단독 호출로 실행한다. 다른 환경에서는 실제 실행 파일 경로를 확인하고 해당 경로의 허용 규칙을 사용한다.
+- 기본 명령: `/Users/dennis/.local/bin/mlx_whisper 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f all --condition-on-previous-text False --output-dir raw/_extracted/`. Claude Code 등 다른 도구에서는 실행 파일 경로를 환경에 맞게 사용한다. `all` 출력의 시각 정보도 보존해 근거 발언·화자 확인에 사용한다.
+- 반복 오류 전파를 줄이기 위해 `--condition-on-previous-text False`를 기본으로 적용한다. 이 옵션이 모든 오인식을 막지는 않으므로 반복·누락·고유명사·숫자를 검토한다. 문맥 연결이 필요한 구간은 별도 출력 위치에서 비교 전사하고 원본과 대조한다.
+- 샌드박스 밖에서도 `No Metal device` 오류가 나거나 MLX 명령이 없으면 `whisper-ctranslate2 파일 --model large-v3-turbo --language ko --output_format all --condition_on_previous_text False --output_dir raw/_extracted/`로 대체한다. CPU 전사는 GPU 접근을 위한 외부 실행을 요구하지 않는다. 동일 파일을 두 엔진으로 동시에 전체 전사하지 않는다.
+- 한국어가 아니면 `--language ko`를 뺀다. 재전사·구간 보정은 기존 출력과 다른 위치에 저장하며, 구간을 잘라 전사했다면 원본 시각으로 환산한다.
+- Codex의 명령 허용 규칙은 `/Users/dennis/.codex/rules/abrain-mlx-whisper.rules`에 둔다. 규칙 변경 뒤 Codex를 재시작한다. 문서 지침과 허용 규칙은 상위 관리 정책·승인 심사를 우회하지 않는다. 외부 실행이 거부되면 거부 사유를 보고하고 허용된 CPU 전사 가능 여부를 확인한다.
 
 #### 회의 녹취록 (음성 전사, 자동 생성 스크립트)
 
@@ -167,7 +195,7 @@ updated: 2026-11-12
 
 ### query — 위키에 대한 모든 질문
 
-1. `wiki/index.md`를 먼저 읽고, 관련 페이지를 읽는다. 필요하면 `wiki/`를 검색한다. 위키로 부족할 때만 `raw/_extracted/`와 `raw/`를 본다.
+1. `wiki/프로필.md`와 `wiki/index.md`를 먼저 읽고, 관련 페이지를 읽는다. 필요하면 `wiki/`를 검색한다. 위키로 부족할 때만 `raw/_extracted/`와 `raw/`를 본다.
 2. 결론부터 답하고 근거 페이지를 `[[링크]]`로 인용한다. 페이지끼리 어긋나면 양쪽을 인용하고 어느 쪽이 최신인지 밝힌다.
 3. "없다"고 답하기 전에 동의어, 한글/영문 표기, `aliases`로 다시 검색한다. "전부", "모든"으로 답할 때는 index만 보지 말고 `wiki/` 전체를 검색한 뒤 답한다. 그래도 없으면 없다고 말한다.
 4. 답이 여러 페이지를 종합한 분석·비교라면 `wiki/topics/`에 저장할지 한 줄로 제안한다. "저장해줘"라고 하면 저장하고 index와 log를 갱신한다.
@@ -206,4 +234,4 @@ updated: 2026-11-12
 - 상충: 출시일 변경
 ```
 
-머리말 형식은 `## [날짜] ingest|query|lint|정정 | 제목`으로 고정한다. 최근 작업 확인: `grep "^## \[" wiki/log.md | tail -5`.
+머리말 형식은 `## [날짜] onboarding|ingest|query|lint|정정 | 제목`으로 고정한다. 최근 작업 확인: `grep "^## \[" wiki/log.md | tail -5`.

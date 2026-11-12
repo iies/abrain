@@ -13,7 +13,7 @@ argument-hint: "[파일 경로 | URL | 텍스트 | 비우면 raw/의 미처리 �
 ## 0. 준비
 
 - 오늘 날짜는 추측하지 말고 `date +%Y-%m-%d`로 확인한다.
-- `wiki/index.md`, `wiki/용어집.md`를 읽는다.
+- `wiki/프로필.md`(있으면), `wiki/index.md`, `wiki/용어집.md`를 읽는다. 프로필의 사용자, 본인 식별 단서, 답변 선호는 `AGENTS.md`의 "프로필 사용"대로 쓴다.
 
 ## 1. 입력 분류
 

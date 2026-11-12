@@ -15,7 +15,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-SPECIAL = {"index", "log", "용어집"}
+SPECIAL = {"index", "log", "용어집", "프로필"}
 REQUIRED = {
     "source": ["raw", "date"],
     "decision": ["status", "date", "owner"],

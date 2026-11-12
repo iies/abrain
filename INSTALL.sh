@@ -258,4 +258,4 @@ command -v claude >/dev/null 2>&1 && { ok "claude (Claude Code)"; AGENT=1; }
 command -v codex  >/dev/null 2>&1 && { ok "codex (Codex CLI)";   AGENT=1; }
 [ -z "$AGENT" ] && warn "claude 또는 codex 가 없습니다. 둘 중 하나를 설치하세요."
 
-finish "설치가 끝났습니다. 이 폴더에서 claude 또는 codex 를 실행하세요."
+finish "설치가 끝났습니다. 이 폴더에서 claude 또는 codex 를 실행하고, 처음 한 번 \"온보딩\"이라고 말하세요."
