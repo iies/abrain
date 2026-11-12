@@ -1,0 +1,14 @@
+# 개인 데이터는 저장소에 올리지 않는다.
+# raw/ 는 넣은 원본과 변환 결과, wiki/ 는 에이전트가 쓴 위키 전체다.
+# 빈 폴더와 index·log·용어집은 INSTALL.sh 가 만든다.
+/raw/
+/wiki/
+
+# 개인 설정과 비밀 값
+.env
+.env.*
+.claude/settings.local.json
+.obsidian/
+
+# macOS
+.DS_Store

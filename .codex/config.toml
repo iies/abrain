@@ -1,0 +1,4 @@
+# LLM Wiki용 Codex 설정. 이 폴더에서 실행할 때만 적용된다.
+# workspace-write 샌드박스 안에서 네트워크를 허용한다.
+[sandbox_workspace_write]
+network_access = true
