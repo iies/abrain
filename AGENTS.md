@@ -147,12 +147,12 @@ updated: 2026-11-12
 #### 음성 전사 실행 규칙
 
 - **Codex의 MLX 전사는 최초 실행부터 샌드박스 밖에서 실행한다.** `exec_command`의 `sandbox_permissions: "require_escalated"`를 지정하고 Metal GPU 접근 목적을 `justification`에 적는다. 샌드박스 안에서 먼저 실행해 실패를 재현하지 않는다. 모델 설치 확인과 원본 복사 등 GPU가 필요 없는 작업은 이 규칙의 대상이 아니다.
-- 이 Mac에서 Codex는 `/Users/dennis/.local/bin/mlx_whisper` 절대 경로로 호출한다. 명령 허용 규칙과 정확히 일치하도록 전사 명령은 다른 명령이나 환경 변수 할당과 묶지 않은 단독 호출로 실행한다. 다른 환경에서는 실제 실행 파일 경로를 확인하고 해당 경로의 허용 규칙을 사용한다.
-- 기본 명령: `/Users/dennis/.local/bin/mlx_whisper 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f all --condition-on-previous-text False --output-dir raw/_extracted/`. Claude Code 등 다른 도구에서는 실행 파일 경로를 환경에 맞게 사용한다. `all` 출력의 시각 정보도 보존해 근거 발언·화자 확인에 사용한다.
+- Codex는 `command -v mlx_whisper`로 확인한 실행 파일의 절대 경로로 호출한다. PATH에 없으면 `uv tool dir --bin` 아래에서 찾는다. 명령 허용 규칙과 정확히 일치하도록 전사 명령은 다른 명령이나 환경 변수 할당과 묶지 않은 단독 호출로 실행한다. 다른 환경에서는 실제 실행 파일 경로를 확인하고 해당 경로의 허용 규칙을 사용한다.
+- 기본 명령: `<MLX 실행 파일의 절대 경로> 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f all --condition-on-previous-text False --output-dir raw/_extracted/`. Claude Code 등 다른 도구에서는 실행 파일 경로를 환경에 맞게 사용한다. `all` 출력의 시각 정보도 보존해 근거 발언·화자 확인에 사용한다.
 - 반복 오류 전파를 줄이기 위해 `--condition-on-previous-text False`를 기본으로 적용한다. 이 옵션이 모든 오인식을 막지는 않으므로 반복·누락·고유명사·숫자를 검토한다. 문맥 연결이 필요한 구간은 별도 출력 위치에서 비교 전사하고 원본과 대조한다.
 - 샌드박스 밖에서도 `No Metal device` 오류가 나거나 MLX 명령이 없으면 `whisper-ctranslate2 파일 --model large-v3-turbo --language ko --output_format all --condition_on_previous_text False --output_dir raw/_extracted/`로 대체한다. CPU 전사는 GPU 접근을 위한 외부 실행을 요구하지 않는다. 동일 파일을 두 엔진으로 동시에 전체 전사하지 않는다.
 - 한국어가 아니면 `--language ko`를 뺀다. 재전사·구간 보정은 기존 출력과 다른 위치에 저장하며, 구간을 잘라 전사했다면 원본 시각으로 환산한다.
-- Codex의 명령 허용 규칙은 `/Users/dennis/.codex/rules/abrain-mlx-whisper.rules`에 둔다. 규칙 변경 뒤 Codex를 재시작한다. 문서 지침과 허용 규칙은 상위 관리 정책·승인 심사를 우회하지 않는다. 외부 실행이 거부되면 거부 사유를 보고하고 허용된 CPU 전사 가능 여부를 확인한다.
+- Codex의 명령 허용 규칙은 `${CODEX_HOME:-$HOME/.codex}/rules/abrain-mlx-whisper.rules`에 둔다. `INSTALL.sh`의 기본 설치와 `--models`가 실제 MLX 경로로 설치하며, 경로 변경이나 기존 설치 환경에서는 `./INSTALL.sh --codex-rules`로 갱신한다. 규칙 변경 뒤 Codex를 재시작한다. 문서 지침과 허용 규칙은 상위 관리 정책·승인 심사를 우회하지 않는다. 외부 실행이 거부되면 거부 사유를 보고하고 허용된 CPU 전사 가능 여부를 확인한다.
 
 #### 회의 녹취록 (음성 전사, 자동 생성 스크립트)
 

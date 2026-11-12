@@ -3,6 +3,7 @@
 # 여러 번 실행해도 안전하다. 이미 설치된 것은 건너뛴다.
 #
 #   ./INSTALL.sh                  기본 설치. 음성 인식 모델은 받을지 묻는다 (기본: 받지 않음)
+#   ./INSTALL.sh --codex-rules    설치된 MLX의 Codex 전역 허용 규칙만 설정한다
 #   ./INSTALL.sh --models         음성 인식 모델만 받는다 (나중에 회의 녹음을 전사할 때)
 #   ./INSTALL.sh --check-models   음성 인식 모델이 있는지 확인만 한다 (있으면 0, 없으면 1로 끝남)
 #
@@ -14,6 +15,7 @@
 #            whisper-ctranslate2 (음성·영상 → 텍스트, CPU. 예비용)
 #   모델   : (선택) Whisper large-v3 (MLX, 약 3GB) + large-v3-turbo (CPU, 약 1.6GB)
 #   설정   : .codex/config.toml (Codex 샌드박스 네트워크 허용)
+#            ${CODEX_HOME:-~/.codex}/rules/abrain-mlx-whisper.rules (전역 MLX 실행 허용)
 #   폴더   : raw/, wiki/ 와 빈 index·log·용어집 (없을 때만 만든다. 기존 내용은 건드리지 않는다)
 
 set -uo pipefail
@@ -21,8 +23,8 @@ set -uo pipefail
 PY=3.11                     # 모든 도구를 이 버전에서 확인했다
 # 음성 인식은 두 가지를 설치한다.
 #  - mlx-whisper + large-v3 : 한국어 대화체 정확도가 가장 좋고 GPU로 빠르다 (실시간의 약 11배).
-#  - whisper-ctranslate2 + large-v3-turbo : CPU 전용 (약 4.7배). Codex 샌드박스는 GPU(Metal)를
-#    쓸 수 없어서 mlx-whisper가 실패한다. 그때와 Intel 맥에서 쓰는 예비 경로다.
+#  - whisper-ctranslate2 + large-v3-turbo : CPU 전용 (약 4.7배).
+#    MLX를 샌드박스 밖에서도 실행할 수 없을 때와 Intel 맥에서 쓰는 예비 경로다.
 MLX_MODEL=mlx-community/whisper-large-v3-mlx
 CPU_MODEL=large-v3-turbo
 CPU_MODEL_REPO=mobiuslabsgmbh/faster-whisper-large-v3-turbo   # faster-whisper가 large-v3-turbo를 받는 저장소
@@ -60,14 +62,6 @@ if [ "${1:-}" = "--check-models" ]; then
   if models_ready; then exit 0; fi
   printf "\n  %s\n" "$MODELS_HINT"
   exit 1
-fi
-
-# ── 0. 환경 확인 ─────────────────────────────────────────────
-if [ "$(uname -s)" != "Darwin" ]; then
-  echo "이 스크립트는 macOS 전용입니다."; exit 1
-fi
-if ! command -v brew >/dev/null 2>&1; then
-  echo "Homebrew가 필요합니다: https://brew.sh"; exit 1
 fi
 
 install_brew() {  # install_brew <패키지...>
@@ -119,6 +113,66 @@ ensure_tool_path() {
   esac
 }
 
+# 정확히 이 MLX 실행 파일만 허용한다. 다른 규칙과 전역 config.toml은 수정하지 않는다.
+# 인자는 격리된 설치 검증에서도 사용할 수 있다.
+install_codex_rules() {
+  local config_home="${1:-${CODEX_HOME:-$HOME/.codex}}"
+  local mlx bin escaped rules_dir target tmp backup
+  if [ "$ARCH" != "arm64" ]; then
+    ok "Intel 맥: Codex MLX 규칙은 건너뜁니다."
+    return
+  fi
+  mlx="$(command -v mlx_whisper 2>/dev/null || true)"
+  if [ -z "$mlx" ] && command -v uv >/dev/null 2>&1; then
+    bin="$(uv tool dir --bin 2>/dev/null || true)"
+    if [ -n "$bin" ] && [ -x "$bin/mlx_whisper" ]; then mlx="$bin/mlx_whisper"; fi
+  fi
+  if [ -z "$mlx" ] || [ ! -f "$mlx" ] || [ ! -x "$mlx" ]; then
+    fail "mlx_whisper 실행 파일을 찾지 못했습니다. ./INSTALL.sh 로 먼저 설치하세요."
+    return
+  fi
+  # 상대 PATH 항목도 절대 경로로 바꾸되 uv의 실행 파일 링크는 유지한다.
+  case "$mlx" in
+    /*) ;;
+    *) mlx="$(cd "$(dirname "$mlx")" && pwd)/$(basename "$mlx")" ;;
+  esac
+  escaped="${mlx//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  escaped="${escaped//$'\r'/\\r}"
+  escaped="${escaped//$'\t'/\\t}"
+  rules_dir="$config_home/rules"
+  target="$rules_dir/abrain-mlx-whisper.rules"
+  if ! mkdir -p "$rules_dir"; then fail "Codex 규칙 폴더 생성: $rules_dir"; return; fi
+  if [ -L "$target" ]; then fail "심볼릭 링크인 규칙 파일은 수정하지 않습니다: $target"; return; fi
+  tmp="$(mktemp "$rules_dir/.abrain-mlx-whisper.XXXXXX")" || { fail "Codex 규칙 임시 파일 생성"; return; }
+  if ! cat > "$tmp" <<EOF
+# Managed by abrain INSTALL.sh. Re-run --codex-rules after moving mlx_whisper.
+# This global rule allows only the named executable outside the sandbox.
+prefix_rule(
+    pattern = ["$escaped"],
+    decision = "allow",
+    justification = "Local audio transcription requires Metal GPU access",
+)
+EOF
+  then
+    rm -f "$tmp"; fail "Codex 규칙 작성"; return
+  fi
+  if [ -f "$target" ] && cmp -s "$tmp" "$target"; then
+    rm -f "$tmp"
+    ok "Codex MLX 전역 규칙 (이미 설정됨): $mlx"
+    return
+  fi
+  if [ -e "$target" ]; then
+    backup="$(mktemp "$rules_dir/abrain-mlx-whisper.backup.XXXXXX")" || { rm -f "$tmp"; fail "규칙 백업 생성"; return; }
+    if ! cp -p "$target" "$backup"; then rm -f "$tmp" "$backup"; fail "규칙 백업 실패"; return; fi
+    warn "기존 MLX 규칙 백업: $backup"
+  fi
+  if ! mv -f "$tmp" "$target"; then rm -f "$tmp"; fail "Codex 규칙 설치"; return; fi
+  ok "Codex MLX 전역 규칙: $target → $mlx"
+  warn "모든 Codex 프로젝트에 적용됩니다. Codex를 재시작하세요. 상위 관리 정책은 계속 적용됩니다."
+}
+
 # 1초짜리 무음 파일을 전사해 모델을 캐시에 받아 둔다. 처음에는 몇 분 걸린다.
 download_models() {
   local tmp
@@ -158,12 +212,27 @@ finish() {  # finish <성공 메시지>
   exit 0
 }
 
+# 규칙만 설정할 때는 Homebrew나 모델 다운로드가 필요 없다.
+if [ "${1:-}" = "--codex-rules" ]; then
+  install_codex_rules
+  finish "Codex MLX 허용 규칙 설정을 마쳤습니다."
+fi
+
+# ── 0. 환경 확인 ─────────────────────────────────────────────
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "이 스크립트는 macOS 전용입니다."; exit 1
+fi
+if ! command -v brew >/dev/null 2>&1; then
+  echo "Homebrew가 필요합니다: https://brew.sh"; exit 1
+fi
+
 # ── 모델만 받기 (--models) ───────────────────────────────────
 if [ "${1:-}" = "--models" ]; then
   say "1/2 음성 인식 도구"
   install_brew uv ffmpeg
   install_whisper_tools
   ensure_tool_path
+  install_codex_rules
   say "2/2 음성 인식 모델 (약 4.6GB, 처음에는 몇 분 걸립니다)"
   download_models
   finish "음성 인식 모델을 받았습니다. 이제 음성·영상 파일을 ingest 할 수 있습니다."
@@ -171,7 +240,7 @@ fi
 
 if [ -n "${1:-}" ]; then
   echo "알 수 없는 옵션: $1"
-  echo "사용법: ./INSTALL.sh [--models | --check-models]"
+  echo "사용법: ./INSTALL.sh [--models | --check-models | --codex-rules]"
   exit 1
 fi
 
@@ -185,6 +254,7 @@ install_tool markitdown           'markitdown[all]'
 install_tool pyhwp                pyhwp --with six
 install_whisper_tools
 ensure_tool_path
+install_codex_rules
 
 # ── 3. 음성 인식 모델 (선택) ─────────────────────────────────
 say "3/6 음성 인식 모델 (선택)"
