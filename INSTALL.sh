@@ -156,7 +156,7 @@ fi
 
 # ── 6. 확인 ──────────────────────────────────────────────────
 say "6/6 설치 확인"
-CMDS="uv ffmpeg pdftotext pdftoppm yt-dlp markitdown hwp5html whisper-ctranslate2 textutil unzip curl git"
+CMDS="uv ffmpeg pdftotext pdftoppm yt-dlp markitdown hwp5html whisper-ctranslate2 textutil unzip curl"
 [ "$ARCH" = "arm64" ] && CMDS="$CMDS mlx_whisper"
 for cmd in $CMDS; do
   if command -v "$cmd" >/dev/null 2>&1; then ok "$cmd"; else fail "$cmd 명령을 찾을 수 없음"; fi

@@ -35,7 +35,7 @@ wiki/topics/         개념, 반복되는 주제, 비교·분석
 - 파일명: sources와 decisions는 `YYYY-MM-DD 제목.md`, 나머지는 `이름.md`. 파일명에 `[ ] # ^ | \ / :` 는 쓰지 않는다.
 - 모든 사실에는 출처를 붙인다: 문장 끝에 `([[2026-11-12 주간 리더십 회의]])`. 출처 없는 내용은 쓰지 않는다. 추론은 "추정:"으로 표시한다.
 - 날짜는 항상 절대 날짜(`2026-11-12`). "어제", "다음 주"는 원본 날짜를 기준으로 환산한다.
-- 페이지는 **현재 상태**를 서술한다. 새 정보가 오면 덧붙이지 말고 해당 문단을 다시 쓴다. 이력은 `log.md`와 git에 남는다.
+- 페이지는 **현재 상태**를 서술한다. 새 정보가 오면 덧붙이지 말고 해당 문단을 다시 쓴다. 이력은 `log.md`에 남는다.
 - 모든 페이지는 frontmatter로 시작한다:
 
 ```yaml
@@ -117,7 +117,7 @@ updated: 2026-11-12
 | hwp | `hwp5html --html --output raw/_extracted/원본파일명.html 파일` 후 `markitdown`으로 변환한다. |
 | hwpx | `unzip -p 파일 'Contents/section*.xml'` 출력에서 `<hp:t>` 태그의 텍스트를 뽑는다. |
 | doc, rtf, odt | `textutil -convert txt -stdout 파일` |
-| 음성 (mp3, wav, m4a, ogg, flac), 영상 (mp4, mkv, mov, webm) | `mlx_whisper 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f txt --output-dir raw/_extracted/`. "No Metal device" 오류가 나거나 명령이 없으면 `whisper-ctranslate2 파일 --model large-v3-turbo --language ko --output_format txt --output_dir raw/_extracted/`. 한국어가 아니면 `--language`를 뺀다. |
+| 음성 (mp3, wav, m4a, ogg, flac), 영상 (mp4, mkv, mov, webm) | `mlx_whisper 파일 --model mlx-community/whisper-large-v3-mlx --language ko -f txt --output-dir raw/_extracted/`. "No Metal device" 오류가 나거나 명령이 없으면 `whisper-ctranslate2 파일 --model large-v3-turbo --language ko --output_format txt --output_dir raw/_extracted/`. 한국어가 아니면 `--language`를 뺀다. 결과에서 같은 문장이 계속 반복되면 `--condition-on-previous-text False` (whisper-ctranslate2는 `--condition_on_previous_text False`)를 붙여 다시 전사한다. |
 | 영상 속 화면 (화면 공유, 발표 자료) | 화면 내용이 중요하면 `ffmpeg -i 파일 -vf "select='eq(n,0)+gt(scene,0.3)'" -fps_mode vfr raw/_extracted/원본파일명/f-%03d.jpg`로 장면을 뽑아 직접 본다. |
 | YouTube URL | 먼저 `yt-dlp --list-subs URL`로 자막을 확인한다. 영상의 원래 언어 자막이 있으면 (사람이 올린 자막 우선, 없으면 자동 자막) `yt-dlp --skip-download --write-subs --write-auto-subs --sub-langs 언어코드 --convert-subs srt -o "raw/%(upload_date>%Y-%m-%d)s %(title)s" URL`로 받는다. 번역 자막은 요청하지 않는다 (차단된다). 자막이 없으면 `yt-dlp -x --audio-format mp3 -o "raw/%(upload_date>%Y-%m-%d)s %(title)s.%(ext)s" URL`로 음성을 받아 음성 파일과 같이 처리한다. 영상 파일 자체는 받지 않는다. |
 | Google Docs·Slides·Sheets URL | 연결된 Google Drive 도구로 내보내 `raw/YYYY-MM-DD 제목.확장자`로 저장한다 (Slides는 pdf, Docs는 docx, Sheets는 xlsx). 도구가 파일을 다른 위치에 저장하면 `raw/`로 복사하고, 다운로드 URL을 돌려주면 `curl`로 받는다. 도구가 없거나 실패하면 파일로 내려받아 `raw/`에 넣어 달라고 요청한다. |
@@ -146,8 +146,22 @@ updated: 2026-11-12
 
 - 주요 발언은 `참여자A: "근거 문장"` 형태로 인용한다. 확신이 낮음이면 화자를 붙이지 않는다.
 - 이름이 **확정되지 않은** 화자의 발언은 사람 페이지로 전파하지 않는다. 프로젝트 페이지와 열린 항목에는 `참여자A (미확정)`로 적는다. 본문에서 이름이 추정되더라도 사람이 확인하기 전까지는 미확정이다.
-- 보고에서 참여자 표를 보여주고 이름을 묻는다.
-- 사람이 "참여자A는 홍길동이다"라고 알려주면: 요약 페이지의 표를 확정으로 고치고, 그 라벨이 쓰인 모든 페이지를 `[[홍길동]]`으로 바꾸고, 사람 페이지에 그 발언과 약속을 전파한 뒤 log에 기록한다.
+- **정리가 끝나면 발언자를 묻는다.** 보고의 마지막에, 참여자마다 그 사람의 주요 발언 2~3개를 시각과 함께 보여주고 "이 발언을 한 사람의 이름은 무엇입니까?"라고 묻는다. 모든 참여자를 한 번의 질문에 담아, 사람이 `A=홍길동, B=모름`처럼 한 줄로 답할 수 있게 한다. 화자를 붙이지 못한 주요 발언이 있으면 같은 질문 아래에 따로 모아 함께 묻는다.
+
+```
+발언자 확인 — 이 발언을 한 사람의 이름은 무엇입니까? (예: A=홍길동, B=모름)
+
+참여자A (의사결정자로 추정)
+  [1:10] "그러면 묶음 발송은 12월 8일 배포에 넣는 걸로 하자. 확정."
+  [2:20] "그건 나중에. 이번엔 빼."
+참여자B (제안 발표자로 추정)
+  [0:00] "제가 다음 주 수요일까지 AB 테스트 설계해서 드리겠습니다."
+화자 미상
+  [3:05] "카톡 쪽도 같이 바꾸는 건 좀 생각해 봅시다."
+```
+
+- "모름"이라고 답한 참여자는 미확정으로 두고, lint 때 다시 묻는다.
+- 사람이 이름을 알려주면 ("A=홍길동", "참여자A는 홍길동이다"): 요약 페이지의 표를 확정으로 고치고, 그 라벨이 쓰인 모든 페이지를 `[[홍길동]]`으로 바꾸고, 사람 페이지에 그 발언과 약속을 전파한 뒤 log에 기록한다.
 
 ### query — 위키에 대한 모든 질문
 
