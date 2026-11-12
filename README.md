@@ -3,7 +3,7 @@
 [Karpathy의 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 패턴의 최소 구현.
 회의록, 문서, 녹음, 링크를 넣으면 LLM이 결정, 사람, 프로젝트, 주제별로 정리된 위키를 만들고 계속 최신으로 유지한다.
 
-구성은 규칙 문서 하나(`AGENTS.md`)와 설치 스크립트 하나(`INSTALL.sh`)가 전부다. Claude Code와 Codex가 같은 규칙을 읽는다.
+구성은 규칙 문서(`AGENTS.md`), 설치 스크립트(`INSTALL.sh`), 스킬 세 개(`.claude/skills/abrain/`, Codex용 `.agents/skills/`)다. Claude Code와 Codex가 같은 규칙을 읽는다.
 
 ## 시작
 
@@ -22,7 +22,17 @@
 | 물어보기 | "결제 개편 건 지금 어디까지 왔지?", "아직 결정 안 된 사안 뭐 있어?", "내일 김OO 1:1 전에 알아야 할 것" |
 | 답을 위키에 남기기 | 답을 받은 뒤 "저장해줘" |
 | 틀린 내용 고치기 | "그거 틀렸어, 출시일은 12월 20일이야" |
-| 점검 | "lint" (주 1회 정도) |
+| 점검 | "lint" (주 1회 정도. 7일 넘게 안 하면 세션 시작과 작업 보고 끝에 알려 준다) |
+
+같은 작업을 스킬로 직접 부를 수도 있다.
+
+| 스킬 | Claude Code | Codex |
+|---|---|---|
+| 넣기 (파일, URL, 회의 내용, 메모, 아이디어) | `/abrain:ingest [대상]` | `$abrain-ingest` |
+| 묻기 | `/abrain:query 질문` | `$abrain-query` |
+| 점검·교정 | `/abrain:lint` | `$abrain-lint` |
+
+Claude Code에서는 처음 폴더를 열 때 나오는 신뢰(trust) 확인을 승인해야 스킬과 lint 알림 훅이 켜진다.
 
 ## 넣을 수 있는 것
 

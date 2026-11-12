@@ -71,6 +71,8 @@ updated: 2026-11-12
 
 사람이 아래 단어를 쓰거나 같은 뜻으로 말하면 해당 작업을 수행한다.
 
+세 작업은 스킬로도 부를 수 있다: Claude Code는 `/abrain:ingest`, `/abrain:query`, `/abrain:lint`, Codex는 `$abrain-ingest`, `$abrain-query`, `$abrain-lint`. 스킬 본문(`.claude/skills/abrain/skills/*/SKILL.md`)은 이 파일의 절차에 실행 순서와 보고 형식을 더한 것이다. 말로 요청받아도 해당 스킬 본문을 읽고 따른다. 둘이 어긋나면 이 파일이 우선한다.
+
 ### ingest — "ingest", "정리해줘", "이거 넣어줘"
 
 대상: 지정한 파일이나 URL. 지정이 없으면 `raw/`에 있지만 어떤 source 페이지의 `raw:` 필드에도 없는 파일 전부 (`raw/_extracted/`, `raw/assets/` 제외). 대화에 붙여넣은 텍스트는 먼저 `raw/YYYY-MM-DD 제목.md`로 원문 그대로 저장한 뒤 진행한다. 대상이 10개를 넘으면 먼저 3개만 처리해 보고한 뒤 나머지를 진행한다.
@@ -186,6 +188,10 @@ updated: 2026-11-12
 - **미처리 원본**: `raw/`에 있지만 ingest되지 않은 파일.
 
 깨진 링크, index 누락 같은 기계적 문제는 바로 고친다. 판단이 필요한 것은 고치지 않고 보고한다. 보고는 항목별 "발견 / 수정 / 남음" 표로 하고, 더 알아볼 질문이나 넣으면 좋을 소스를 제안한 뒤 log에 기록한다.
+
+기계 점검은 `python3 .claude/skills/abrain/scripts/lint-scan.py`로 먼저 돌린다 (읽기만 한다).
+
+**lint 권고**: lint는 주 1회 한다. ingest나 query 보고를 마칠 때 `.claude/skills/abrain/scripts/lint-due.sh`를 실행하고, 종료 코드가 1이면(마지막 lint가 7일 이상 전) 출력된 한 줄을 보고 끝에 붙인다. 그 기준은 `log.md`의 마지막 `## [날짜] lint` 항목이므로 lint를 마치면 반드시 log에 기록한다.
 
 ## index.md 와 log.md
 

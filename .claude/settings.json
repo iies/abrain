@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/skills/abrain/scripts/lint-due.sh --hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "abrain",
+  "description": "abrain 위키 작업: ingest(넣기), query(묻기), lint(점검)",
+  "version": "0.1.0"
+}
