@@ -201,6 +201,13 @@ def main():
     section("미확정 참여자", speakers)
     section("미처리 원본", unprocessed)
 
+    # Codex는 AGENTS.md를 project_doc_max_bytes(기본 32768바이트)까지만 읽고 뒤는 자른다.
+    agents = root / "AGENTS.md"
+    size = agents.stat().st_size if agents.exists() else 0
+    section("AGENTS.md 크기 (Codex 기본 한도 32768바이트)",
+            [f"{size}바이트 — 한도 초과, Codex에서 뒷부분이 잘린다" if size > 32768
+             else f"{size}바이트 — 남은 여유 {32768 - size}바이트 (1000 미만이면 줄일 것)"] if size > 31768 else [])
+
 
 if __name__ == "__main__":
     main()
