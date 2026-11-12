@@ -2,7 +2,9 @@
 # abrain 사전 설치 스크립트 (macOS + Homebrew)
 # 여러 번 실행해도 안전하다. 이미 설치된 것은 건너뛴다.
 #
-#   ./INSTALL.sh
+#   ./INSTALL.sh                  기본 설치. 음성 인식 모델은 받을지 묻는다 (기본: 받지 않음)
+#   ./INSTALL.sh --models         음성 인식 모델만 받는다 (나중에 회의 녹음을 전사할 때)
+#   ./INSTALL.sh --check-models   음성 인식 모델이 있는지 확인만 한다 (있으면 0, 없으면 1로 끝남)
 #
 # 설치하는 것
 #   brew   : uv, ffmpeg, poppler, yt-dlp
@@ -10,7 +12,7 @@
 #            pyhwp (hwp → html)
 #            mlx-whisper (음성·영상 → 텍스트, Apple Silicon GPU)
 #            whisper-ctranslate2 (음성·영상 → 텍스트, CPU. 예비용)
-#   모델   : Whisper large-v3 (MLX, 약 3GB) + large-v3-turbo (CPU, 약 1.6GB), 최초 1회
+#   모델   : (선택) Whisper large-v3 (MLX, 약 3GB) + large-v3-turbo (CPU, 약 1.6GB)
 #   설정   : .codex/config.toml (Codex 샌드박스 네트워크 허용)
 #   폴더   : raw/, wiki/ 와 빈 index·log·용어집 (없을 때만 만든다. 기존 내용은 건드리지 않는다)
 
@@ -23,13 +25,42 @@ PY=3.11                     # 모든 도구를 이 버전에서 확인했다
 #    쓸 수 없어서 mlx-whisper가 실패한다. 그때와 Intel 맥에서 쓰는 예비 경로다.
 MLX_MODEL=mlx-community/whisper-large-v3-mlx
 CPU_MODEL=large-v3-turbo
+CPU_MODEL_REPO=mobiuslabsgmbh/faster-whisper-large-v3-turbo   # faster-whisper가 large-v3-turbo를 받는 저장소
+HF_CACHE="${HF_HUB_CACHE:-${HF_HOME:-$HOME/.cache/huggingface}/hub}"
 ARCH="$(uname -m)"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 FAILED=""
 
 say()  { printf "\n\033[1m%s\033[0m\n" "$1"; }
 ok()   { printf "  \033[32m✓\033[0m %s\n" "$1"; }
 warn() { printf "  \033[33m!\033[0m %s\n" "$1"; }
 fail() { printf "  \033[31m✗\033[0m %s\n" "$1"; FAILED="$FAILED\n  - $1"; }
+
+# ── 음성 인식 모델 확인 ──────────────────────────────────────
+# Hugging Face 캐시에 모델 스냅샷이 있는지 본다. 네트워크를 쓰지 않는다.
+model_cached() {  # model_cached <저장소 이름>
+  local dir="$HF_CACHE/models--${1//\//--}/snapshots"
+  [ -d "$dir" ] && [ -n "$(ls -A "$dir" 2>/dev/null)" ]
+}
+models_ready() {
+  model_cached "$CPU_MODEL_REPO" || return 1
+  if [ "$ARCH" = "arm64" ]; then model_cached "$MLX_MODEL" || return 1; fi
+  return 0
+}
+print_model_status() {
+  if [ "$ARCH" = "arm64" ]; then
+    if model_cached "$MLX_MODEL"; then ok "large-v3 (MLX)"; else warn "large-v3 (MLX) 없음"; fi
+  fi
+  if model_cached "$CPU_MODEL_REPO"; then ok "$CPU_MODEL (CPU)"; else warn "$CPU_MODEL (CPU) 없음"; fi
+}
+MODELS_HINT="음성·영상 전사가 필요할 때 ./INSTALL.sh --models 로 모델(약 4.6GB)을 받으세요."
+
+if [ "${1:-}" = "--check-models" ]; then
+  print_model_status
+  if models_ready; then exit 0; fi
+  printf "\n  %s\n" "$MODELS_HINT"
+  exit 1
+fi
 
 # ── 0. 환경 확인 ─────────────────────────────────────────────
 if [ "$(uname -s)" != "Darwin" ]; then
@@ -39,26 +70,24 @@ if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew가 필요합니다: https://brew.sh"; exit 1
 fi
 
-# ── 1. Homebrew 패키지 ───────────────────────────────────────
-say "1/6 Homebrew 패키지"
-for pkg in uv ffmpeg poppler yt-dlp; do
-  if brew list --formula "$pkg" >/dev/null 2>&1; then
-    ok "$pkg (이미 설치됨)"
-  elif brew install "$pkg"; then
-    ok "$pkg"
-  else
-    fail "brew install $pkg"
+install_brew() {  # install_brew <패키지...>
+  local pkg
+  for pkg in "$@"; do
+    if brew list --formula "$pkg" >/dev/null 2>&1; then
+      ok "$pkg (이미 설치됨)"
+    elif brew install "$pkg"; then
+      ok "$pkg"
+    else
+      fail "brew install $pkg"
+    fi
+  done
+  if ! command -v uv >/dev/null 2>&1; then
+    echo "uv 설치에 실패해 계속할 수 없습니다."; exit 1
   fi
-done
+}
 
-if ! command -v uv >/dev/null 2>&1; then
-  echo "uv 설치에 실패해 계속할 수 없습니다."; exit 1
-fi
-
-# ── 2. 변환 도구 (uv tool) ───────────────────────────────────
 # uvx로 매번 내려받지 않고 미리 설치해 둔다.
 # Codex 샌드박스는 uv 캐시 폴더에 쓸 수 없어서 uvx가 실패하기 때문이다.
-say "2/6 변환 도구"
 install_tool() {  # install_tool <표시 이름> <uv tool install 인자...>
   local name="$1"; shift
   if uv tool install --quiet --python "$PY" "$@"; then
@@ -67,48 +96,110 @@ install_tool() {  # install_tool <표시 이름> <uv tool install 인자...>
     fail "uv tool install $name"
   fi
 }
-install_tool markitdown           'markitdown[all]'
-install_tool pyhwp                pyhwp --with six
-install_tool whisper-ctranslate2  whisper-ctranslate2
-if [ "$ARCH" = "arm64" ]; then
-  install_tool mlx-whisper        mlx-whisper
-else
-  warn "Intel 맥이라 mlx-whisper는 건너뜁니다. 음성 전사는 CPU로 동작합니다."
-fi
+install_whisper_tools() {
+  install_tool whisper-ctranslate2  whisper-ctranslate2
+  if [ "$ARCH" = "arm64" ]; then
+    install_tool mlx-whisper        mlx-whisper
+  else
+    warn "Intel 맥이라 mlx-whisper는 건너뜁니다. 음성 전사는 CPU로 동작합니다."
+  fi
+}
 
 # uv tool 실행 파일 폴더(~/.local/bin)가 PATH에 없으면 셸 설정에 추가한다.
-TOOL_BIN="$(uv tool dir --bin 2>/dev/null || echo "$HOME/.local/bin")"
-case ":$PATH:" in
-  *":$TOOL_BIN:"*) ;;
-  *)
-    uv tool update-shell >/dev/null 2>&1
-    export PATH="$TOOL_BIN:$PATH"
-    warn "PATH에 $TOOL_BIN 을 추가했습니다. 터미널을 새로 열어야 적용됩니다."
-    ;;
-esac
+ensure_tool_path() {
+  local bin
+  bin="$(uv tool dir --bin 2>/dev/null || echo "$HOME/.local/bin")"
+  case ":$PATH:" in
+    *":$bin:"*) ;;
+    *)
+      uv tool update-shell >/dev/null 2>&1
+      export PATH="$bin:$PATH"
+      warn "PATH에 $bin 을 추가했습니다. 터미널을 새로 열어야 적용됩니다."
+      ;;
+  esac
+}
 
-# ── 3. 음성 인식 모델 미리 받기 ──────────────────────────────
 # 1초짜리 무음 파일을 전사해 모델을 캐시에 받아 둔다. 처음에는 몇 분 걸린다.
-say "3/6 음성 인식 모델"
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-if ! ffmpeg -loglevel error -f lavfi -i anullsrc=r=16000:cl=mono -t 1 "$TMP/silence.wav"; then
-  fail "ffmpeg 로 시험 파일 만들기"
-else
+download_models() {
+  local tmp
+  tmp="$(mktemp -d)"
+  TMP_DIR="$tmp"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+  if ! ffmpeg -loglevel error -f lavfi -i anullsrc=r=16000:cl=mono -t 1 "$tmp/silence.wav"; then
+    fail "ffmpeg 로 시험 파일 만들기"
+    return
+  fi
   if [ "$ARCH" = "arm64" ]; then
-    if mlx_whisper "$TMP/silence.wav" --model "$MLX_MODEL" --language ko \
-         -f txt --output-dir "$TMP" >/dev/null 2>&1; then
+    if model_cached "$MLX_MODEL"; then
+      ok "large-v3 (MLX, 이미 있음)"
+    elif mlx_whisper "$tmp/silence.wav" --model "$MLX_MODEL" --language ko \
+           -f txt --output-dir "$tmp" >/dev/null 2>&1; then
       ok "large-v3 (MLX)"
     else
       fail "mlx-whisper 모델 내려받기 ($MLX_MODEL)"
     fi
   fi
-  if whisper-ctranslate2 "$TMP/silence.wav" --model "$CPU_MODEL" --language ko \
-       --output_dir "$TMP" --output_format txt >/dev/null 2>&1; then
+  if model_cached "$CPU_MODEL_REPO"; then
+    ok "$CPU_MODEL (CPU, 이미 있음)"
+  elif whisper-ctranslate2 "$tmp/silence.wav" --model "$CPU_MODEL" --language ko \
+         --output_dir "$tmp" --output_format txt >/dev/null 2>&1; then
     ok "$CPU_MODEL (CPU)"
   else
     fail "whisper-ctranslate2 모델 내려받기 ($CPU_MODEL)"
   fi
+}
+
+finish() {  # finish <성공 메시지>
+  if [ -n "$FAILED" ]; then
+    printf "\n\033[31m실패한 항목:\033[0m$FAILED\n\n위 항목을 해결한 뒤 다시 실행하세요.\n"
+    exit 1
+  fi
+  printf "\n\033[32m%s\033[0m\n" "$1"
+  exit 0
+}
+
+# ── 모델만 받기 (--models) ───────────────────────────────────
+if [ "${1:-}" = "--models" ]; then
+  say "1/2 음성 인식 도구"
+  install_brew uv ffmpeg
+  install_whisper_tools
+  ensure_tool_path
+  say "2/2 음성 인식 모델 (약 4.6GB, 처음에는 몇 분 걸립니다)"
+  download_models
+  finish "음성 인식 모델을 받았습니다. 이제 음성·영상 파일을 ingest 할 수 있습니다."
+fi
+
+if [ -n "${1:-}" ]; then
+  echo "알 수 없는 옵션: $1"
+  echo "사용법: ./INSTALL.sh [--models | --check-models]"
+  exit 1
+fi
+
+# ── 1. Homebrew 패키지 ───────────────────────────────────────
+say "1/6 Homebrew 패키지"
+install_brew uv ffmpeg poppler yt-dlp
+
+# ── 2. 변환 도구 (uv tool) ───────────────────────────────────
+say "2/6 변환 도구"
+install_tool markitdown           'markitdown[all]'
+install_tool pyhwp                pyhwp --with six
+install_whisper_tools
+ensure_tool_path
+
+# ── 3. 음성 인식 모델 (선택) ─────────────────────────────────
+say "3/6 음성 인식 모델 (선택)"
+if models_ready; then
+  print_model_status
+else
+  ANSWER=""
+  if [ -t 0 ]; then
+    printf "  음성·영상 전사에 쓰는 모델(약 4.6GB)을 지금 받을까요? 나중에 받아도 됩니다. [y/N] "
+    read -r ANSWER || ANSWER=""
+  fi
+  case "$ANSWER" in
+    [yY]|[yY][eE][sS]) download_models ;;
+    *) warn "건너뜁니다. $MODELS_HINT" ;;
+  esac
 fi
 
 # ── 4. Codex 샌드박스 설정 ───────────────────────────────────
@@ -116,7 +207,6 @@ fi
 # Google Drive 내보내기 파일을 받을 수 없다. 이 폴더에만 적용되는 설정 파일로
 # 네트워크를 허용한다. 개인 전역 설정(~/.codex/config.toml)은 건드리지 않는다.
 say "4/6 Codex 샌드박스 설정"
-ROOT="$(cd "$(dirname "$0")" && pwd)"
 CODEX_CFG="$ROOT/.codex/config.toml"
 if [ ! -f "$CODEX_CFG" ]; then
   mkdir -p "$ROOT/.codex"
@@ -161,14 +251,11 @@ CMDS="uv ffmpeg pdftotext pdftoppm yt-dlp markitdown hwp5html whisper-ctranslate
 for cmd in $CMDS; do
   if command -v "$cmd" >/dev/null 2>&1; then ok "$cmd"; else fail "$cmd 명령을 찾을 수 없음"; fi
 done
+models_ready || warn "음성 인식 모델 없음 (선택). $MODELS_HINT"
 
 AGENT=""
 command -v claude >/dev/null 2>&1 && { ok "claude (Claude Code)"; AGENT=1; }
 command -v codex  >/dev/null 2>&1 && { ok "codex (Codex CLI)";   AGENT=1; }
 [ -z "$AGENT" ] && warn "claude 또는 codex 가 없습니다. 둘 중 하나를 설치하세요."
 
-if [ -n "$FAILED" ]; then
-  printf "\n\033[31m실패한 항목:\033[0m$FAILED\n\n위 항목을 해결한 뒤 다시 실행하세요.\n"
-  exit 1
-fi
-printf "\n\033[32m설치가 끝났습니다.\033[0m 이 폴더에서 claude 또는 codex 를 실행하세요.\n"
+finish "설치가 끝났습니다. 이 폴더에서 claude 또는 codex 를 실행하세요."
