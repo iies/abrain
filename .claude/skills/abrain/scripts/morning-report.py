@@ -165,21 +165,25 @@ def page_ref(name):
         return ""
     hit = next(iter(sorted(WIKI.rglob(name + ".md"))), None) if WIKI.is_dir() else None
     if not hit:
-        return f'<span class="page">{e(name)}</span>'
+        return f'<span class="wpage">{e(name)}</span>'
     rel = hit.relative_to(WIKI.parent).as_posix()
     href = "obsidian://open?path=" + quote(str(hit))
-    return (f'<span class="page" title="{e(rel)}">{e(name)}</span> '
+    return (f'<span class="wpage" title="{e(rel)}">{e(name)}</span> '
             f'<a class="src" href="{e(href)}">Obsidian에서 열기</a>')
 
 
-def refs(it):
-    """항목에 붙는 근거: 위키 페이지(page, pages)와 원문 링크(url, links)."""
+def refs(it, inline=False):
+    """항목에 붙는 근거: 위키 페이지(page, pages)와 원문 링크(url, links). inline이면 문장 뒤에 이어 붙인다."""
     out = [page_ref(n) for n in ([it.get("page")] if it.get("page") else []) + list(it.get("pages") or [])]
     if it.get("url"):
         out.append(link(it["url"]))
     out += [link(l.get("url"), l.get("label") or "원문") for l in it.get("links") or []]
     out = [x for x in out if x]
-    return f'<p class="refs">{" · ".join(out)}</p>' if out else ""
+    if not out:
+        return ""
+    if inline:
+        return f' <span class="refs">{" · ".join(out)}</span>'
+    return f'<p class="refs">{" · ".join(out)}</p>'
 
 
 def wiki_block(items, ok_note):
@@ -188,7 +192,7 @@ def wiki_block(items, ok_note):
     out = ""
     for it in items or []:
         num = f'<span class="wiki-n">{e(it["count"])}</span>' if it.get("count") is not None else ""
-        subs = "".join(f'<li>{e(sub.get("text"))}{refs(sub)}</li>' for sub in it.get("items") or [])
+        subs = "".join(f'<li>{e(sub.get("text"))}{refs(sub, inline=True)}</li>' for sub in it.get("items") or [])
         subs = f'<ul class="sub">{subs}</ul>' if subs else ""
         action = f'<p class="todo"><span class="k">할 일</span>{e(it["action"])}</p>' if it.get("action") else ""
         out += (f'<li><p class="row-title">{num}{e(it.get("label"))}</p>'
@@ -224,7 +228,7 @@ def suggestions_block(items):
                    f'<code id="say-{n}">{e(it["say"])}</code>'
                    f'<button type="button" class="copy" data-copy="say-{n}">복사</button>{hint}</p>')
         how = f'<p class="todo"><span class="k">방법</span>{e(it["how"])}</p>' if it.get("how") else ""
-        subs = "".join(f'<li>{e(sub.get("text"))}{refs(sub)}</li>' for sub in it.get("items") or [])
+        subs = "".join(f'<li>{e(sub.get("text"))}{refs(sub, inline=True)}</li>' for sub in it.get("items") or [])
         subs = f'<ul class="sub">{subs}</ul>' if subs else ""
         out += (f'<li><p class="row-title"><span class="pill tidy">{e(it.get("kind"))}</span>{e(it.get("title"))}</p>'
                 f'{why}{subs}{refs(it)}{say}{how}</li>')
@@ -322,10 +326,11 @@ blockquote { font-size: 14px; color: var(--ink); white-space: pre-line; overflow
 .wiki > li + li, .sugg > li + li { border-top: 1px solid var(--line); }
 .wiki > li:first-child, .sugg > li:first-child { padding-top: 2px; }
 .wiki-n { font-family: var(--mono); font-weight: 600; color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
-.sub { display: flex; flex-direction: column; gap: 6px; padding-left: 14px; border-left: 2px solid var(--line); margin-block: 2px; }
-.sub li { font-size: 14px; overflow-wrap: anywhere; }
+.sub { display: flex; flex-direction: column; gap: 4px; margin-block: 2px; }
+.sub li { font-size: 14px; overflow-wrap: anywhere; position: relative; padding-left: 14px; }
+.sub li::before { content: "·"; position: absolute; left: 3px; color: var(--muted); font-weight: 700; }
 .refs { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; line-height: 2; }
-span.page { font-size: 12.5px; background: var(--off-soft); color: var(--ink); padding: 1px 7px; border-radius: 4px; }
+span.wpage { font-size: 12.5px; display: inline; background: var(--off-soft); color: var(--ink); padding: 1px 7px; border-radius: 4px; }
 .todo { font-size: 14px; }
 .say { font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .say .k { margin-right: 0; }
